@@ -1,6 +1,6 @@
 import { useMemo, useCallback } from "react";
 import { useLocalStorage } from "./useLocalStorage";
-import { Expense, Category, MonthlyBudget, MonthlyIncome, MonthSummary, DEFAULT_CATEGORIES } from "@/types/expense";
+import { Expense, Category, MonthlyBudget, MonthlyIncome, MonthSummary, ShoppingItem, DEFAULT_CATEGORIES } from "@/types/expense";
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, getDaysInMonth } from "date-fns";
 
 export function useExpenses() {
@@ -8,6 +8,7 @@ export function useExpenses() {
   const [categories] = useLocalStorage<Category[]>("categories", DEFAULT_CATEGORIES);
   const [budgets, setBudgets] = useLocalStorage<MonthlyBudget[]>("budgets", []);
   const [incomes, setIncomes] = useLocalStorage<MonthlyIncome[]>("incomes", []);
+  const [shoppingItems, setShoppingItems] = useLocalStorage<ShoppingItem[]>("shopping-items", []);
 
   const addExpense = useCallback((expense: Omit<Expense, "id">) => {
     setExpenses((prev) => [...prev, { ...expense, id: crypto.randomUUID() }]);
@@ -17,19 +18,34 @@ export function useExpenses() {
     setExpenses((prev) => prev.filter((e) => e.id !== id));
   }, [setExpenses]);
 
+  // Shopping list
+  const addShoppingItem = useCallback((item: Omit<ShoppingItem, "id">) => {
+    setShoppingItems((prev) => [...prev, { ...item, id: crypto.randomUUID() }]);
+  }, [setShoppingItems]);
+
+  const removeShoppingItem = useCallback((id: string) => {
+    setShoppingItems((prev) => prev.filter((i) => i.id !== id));
+  }, [setShoppingItems]);
+
+  const toggleShoppingItem = useCallback((id: string) => {
+    setShoppingItems((prev) => prev.map((i) => i.id === id ? { ...i, purchased: !i.purchased } : i));
+  }, [setShoppingItems]);
+
+  const shoppingTotal = useMemo(() => {
+    return shoppingItems.reduce((s, i) => s + i.price * i.quantity, 0);
+  }, [shoppingItems]);
+
   const setMonthlyIncome = useCallback((month: string, income: number) => {
     const tithe = Math.round(income * 0.1);
     setIncomes((prev) => {
       const filtered = prev.filter((i) => i.month !== month);
       return [...filtered, { month, income, tithe }];
     });
-    // Auto-add tithe as an expense for that month if not already present
     const titheExists = expenses.some(
       (e) => e.category === "tithe" && e.date.startsWith(month) && e.name === "Tithe (10%)"
     );
     if (!titheExists && income > 0) {
       setExpenses((prev) => {
-        // Remove any previous auto-tithe for this month
         const cleaned = prev.filter(
           (e) => !(e.category === "tithe" && e.date.startsWith(month) && e.name === "Tithe (10%)")
         );
@@ -121,5 +137,6 @@ export function useExpenses() {
     setBudget, getBudgetForMonth,
     getMonthExpenses, getMonthSummary,
     currentMonthSummary, exportCSV,
+    shoppingItems, addShoppingItem, removeShoppingItem, toggleShoppingItem, shoppingTotal,
   };
 }
