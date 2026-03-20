@@ -8,6 +8,15 @@ export interface Expense {
   tags?: string[];
 }
 
+export interface ShoppingItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  purchased: boolean;
+  date: string; // ISO string
+}
+
 export interface Category {
   id: string;
   name: string;
