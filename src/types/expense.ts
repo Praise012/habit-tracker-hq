@@ -16,6 +16,12 @@ export interface Category {
   budget?: number;
 }
 
+export interface MonthlyIncome {
+  month: string; // YYYY-MM
+  income: number;
+  tithe: number; // auto-calculated as 10%
+}
+
 export interface MonthlyBudget {
   month: string; // YYYY-MM
   categories: Record<string, number>; // categoryId -> budget amount
@@ -32,14 +38,13 @@ export interface MonthSummary {
 }
 
 export const DEFAULT_CATEGORIES: Category[] = [
-  { id: "groceries", name: "Groceries", icon: "🛒", color: "hsl(160, 60%, 38%)" },
   { id: "transport", name: "Transport", icon: "🚗", color: "hsl(220, 70%, 55%)" },
-  { id: "utilities", name: "Utilities", icon: "💡", color: "hsl(35, 90%, 55%)" },
-  { id: "entertainment", name: "Entertainment", icon: "🎬", color: "hsl(280, 60%, 55%)" },
-  { id: "dining", name: "Dining Out", icon: "🍽️", color: "hsl(0, 72%, 51%)" },
-  { id: "health", name: "Health", icon: "💊", color: "hsl(190, 70%, 45%)" },
   { id: "shopping", name: "Shopping", icon: "🛍️", color: "hsl(320, 60%, 50%)" },
-  { id: "household", name: "Household", icon: "🏠", color: "hsl(45, 80%, 50%)" },
-  { id: "education", name: "Education", icon: "📚", color: "hsl(200, 65%, 50%)" },
-  { id: "other", name: "Other", icon: "📦", color: "hsl(0, 0%, 50%)" },
+  { id: "rent", name: "Rent", icon: "🏠", color: "hsl(45, 80%, 50%)" },
+  { id: "gas", name: "Gas Refilling", icon: "⛽", color: "hsl(35, 90%, 55%)" },
+  { id: "internet", name: "Internet", icon: "📶", color: "hsl(200, 65%, 50%)" },
+  { id: "loans", name: "Loans", icon: "💳", color: "hsl(0, 72%, 51%)" },
+  { id: "parents", name: "Parents", icon: "👨‍👩‍👦", color: "hsl(280, 60%, 55%)" },
+  { id: "child-support", name: "Child Support", icon: "👶", color: "hsl(190, 70%, 45%)" },
+  { id: "tithe", name: "Tithe", icon: "⛪", color: "hsl(160, 60%, 38%)" },
 ];

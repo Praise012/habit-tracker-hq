@@ -1,12 +1,13 @@
 import { useMemo, useCallback } from "react";
 import { useLocalStorage } from "./useLocalStorage";
-import { Expense, Category, MonthlyBudget, MonthSummary, DEFAULT_CATEGORIES } from "@/types/expense";
+import { Expense, Category, MonthlyBudget, MonthlyIncome, MonthSummary, DEFAULT_CATEGORIES } from "@/types/expense";
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, getDaysInMonth } from "date-fns";
 
 export function useExpenses() {
   const [expenses, setExpenses] = useLocalStorage<Expense[]>("expenses", []);
-  const [categories, setCategories] = useLocalStorage<Category[]>("categories", DEFAULT_CATEGORIES);
+  const [categories] = useLocalStorage<Category[]>("categories", DEFAULT_CATEGORIES);
   const [budgets, setBudgets] = useLocalStorage<MonthlyBudget[]>("budgets", []);
+  const [incomes, setIncomes] = useLocalStorage<MonthlyIncome[]>("incomes", []);
 
   const addExpense = useCallback((expense: Omit<Expense, "id">) => {
     setExpenses((prev) => [...prev, { ...expense, id: crypto.randomUUID() }]);
@@ -16,10 +17,37 @@ export function useExpenses() {
     setExpenses((prev) => prev.filter((e) => e.id !== id));
   }, [setExpenses]);
 
-  const addCategory = useCallback((category: Omit<Category, "id">) => {
-    const id = category.name.toLowerCase().replace(/\s+/g, "-");
-    setCategories((prev) => [...prev, { ...category, id }]);
-  }, [setCategories]);
+  const setMonthlyIncome = useCallback((month: string, income: number) => {
+    const tithe = Math.round(income * 0.1);
+    setIncomes((prev) => {
+      const filtered = prev.filter((i) => i.month !== month);
+      return [...filtered, { month, income, tithe }];
+    });
+    // Auto-add tithe as an expense for that month if not already present
+    const titheExists = expenses.some(
+      (e) => e.category === "tithe" && e.date.startsWith(month) && e.name === "Tithe (10%)"
+    );
+    if (!titheExists && income > 0) {
+      setExpenses((prev) => {
+        // Remove any previous auto-tithe for this month
+        const cleaned = prev.filter(
+          (e) => !(e.category === "tithe" && e.date.startsWith(month) && e.name === "Tithe (10%)")
+        );
+        return [...cleaned, {
+          id: crypto.randomUUID(),
+          name: "Tithe (10%)",
+          amount: tithe,
+          category: "tithe",
+          date: new Date(month + "-01").toISOString(),
+          notes: "Auto-calculated from monthly income",
+        }];
+      });
+    }
+  }, [setIncomes, setExpenses, expenses]);
+
+  const getIncomeForMonth = useCallback((month: string) => {
+    return incomes.find((i) => i.month === month);
+  }, [incomes]);
 
   const setBudget = useCallback((month: string, categoryBudgets: Record<string, number>, total: number) => {
     setBudgets((prev) => {
@@ -70,7 +98,7 @@ export function useExpenses() {
   }, [budgets]);
 
   const exportCSV = useCallback(() => {
-    const headers = "Name,Amount,Category,Date,Notes,Tags\n";
+    const headers = "Name,Amount (Ksh),Category,Date,Notes,Tags\n";
     const rows = expenses.map((e) => {
       const cat = categories.find((c) => c.id === e.category);
       return `"${e.name}",${e.amount},"${cat?.name || e.category}","${e.date}","${e.notes || ""}","${(e.tags || []).join(";")}"`;
@@ -87,8 +115,9 @@ export function useExpenses() {
   const currentMonthSummary = useMemo(() => getMonthSummary(new Date()), [getMonthSummary]);
 
   return {
-    expenses, categories, budgets,
-    addExpense, deleteExpense, addCategory,
+    expenses, categories, budgets, incomes,
+    addExpense, deleteExpense,
+    setMonthlyIncome, getIncomeForMonth,
     setBudget, getBudgetForMonth,
     getMonthExpenses, getMonthSummary,
     currentMonthSummary, exportCSV,

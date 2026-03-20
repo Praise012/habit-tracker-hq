@@ -1,44 +1,56 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { useExpenseContext } from "@/context/ExpenseContext";
 import { format, subMonths } from "date-fns";
-import { TrendingUp, TrendingDown, Wallet, Receipt, ArrowRight } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, Receipt, ArrowRight, DollarSign } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
 import { useNavigate } from "react-router-dom";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 export default function Dashboard() {
-  const { currentMonthSummary, getMonthSummary, categories, getMonthExpenses } = useExpenseContext();
+  const { currentMonthSummary, getMonthSummary, categories, getMonthExpenses, getIncomeForMonth, setMonthlyIncome } = useExpenseContext();
   const navigate = useNavigate();
+  const currentMonth = format(new Date(), "yyyy-MM");
+  const monthIncome = getIncomeForMonth(currentMonth);
   const prevSummary = getMonthSummary(subMonths(new Date(), 1));
   const diff = currentMonthSummary.totalSpent - prevSummary.totalSpent;
   const diffPercent = prevSummary.totalSpent > 0 ? (diff / prevSummary.totalSpent) * 100 : 0;
 
+  const [showIncomeInput, setShowIncomeInput] = useState(!monthIncome);
+  const [incomeValue, setIncomeValue] = useState(monthIncome?.income.toString() || "");
+
+  const handleSetIncome = () => {
+    const val = parseFloat(incomeValue);
+    if (!val || val <= 0) { toast.error("Enter a valid income"); return; }
+    setMonthlyIncome(currentMonth, val);
+    toast.success(`Income set! Tithe of Ksh ${Math.round(val * 0.1).toLocaleString()} recorded.`);
+    setShowIncomeInput(false);
+  };
+
   const pieData = currentMonthSummary.topCategories.map((cat) => ({
-    name: cat.name,
-    value: cat.amount,
+    name: cat.name, value: cat.amount,
   }));
 
   const chartColors = [
-    "hsl(160, 60%, 38%)", "hsl(35, 90%, 55%)", "hsl(220, 70%, 55%)",
-    "hsl(280, 60%, 55%)", "hsl(0, 72%, 51%)", "hsl(190, 70%, 45%)",
+    "hsl(220, 70%, 55%)", "hsl(320, 60%, 50%)", "hsl(45, 80%, 50%)",
+    "hsl(35, 90%, 55%)", "hsl(280, 60%, 55%)", "hsl(0, 72%, 51%)",
   ];
 
-  // Last 7 days spending
   const last7Days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (6 - i));
     const dayStr = format(d, "yyyy-MM-dd");
-    const dayExpenses = getMonthExpenses(new Date()).filter(
-      (e) => e.date.startsWith(dayStr)
-    );
-    return {
-      day: format(d, "EEE"),
-      amount: dayExpenses.reduce((s, e) => s + e.amount, 0),
-    };
+    const dayExpenses = getMonthExpenses(new Date()).filter((e) => e.date.startsWith(dayStr));
+    return { day: format(d, "EEE"), amount: dayExpenses.reduce((s, e) => s + e.amount, 0) };
   });
 
   const recentExpenses = [...getMonthExpenses(new Date())]
     .sort((a, b) => b.date.localeCompare(a.date))
     .slice(0, 5);
+
+  const balance = monthIncome ? monthIncome.income - currentMonthSummary.totalSpent : 0;
 
   return (
     <div className="space-y-6 pb-24">
@@ -47,13 +59,57 @@ export default function Dashboard() {
         <h1 className="text-2xl font-bold font-display">Spending Overview</h1>
       </motion.div>
 
+      {/* Income Card */}
+      {showIncomeInput || !monthIncome ? (
+        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.03 }}
+          className="stat-card space-y-3">
+          <div className="flex items-center gap-2">
+            <DollarSign className="w-5 h-5 text-primary" />
+            <h2 className="font-display font-semibold text-sm">Set {format(new Date(), "MMMM")} Income</h2>
+          </div>
+          <div className="flex gap-2">
+            <Input type="number" min="0" placeholder="e.g. 80000" value={incomeValue}
+              onChange={(e) => setIncomeValue(e.target.value)} className="h-10 rounded-xl" />
+            <Button onClick={handleSetIncome} className="rounded-xl px-4">Set</Button>
+          </div>
+          <p className="text-xs text-muted-foreground">Tithe (10%) will be auto-deducted as an expense.</p>
+        </motion.div>
+      ) : (
+        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.03 }}
+          className="stat-card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">Monthly Income</p>
+              <p className="text-lg font-bold font-display">Ksh {monthIncome.income.toLocaleString()}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-muted-foreground">Tithe</p>
+              <p className="text-sm font-semibold text-primary">Ksh {monthIncome.tithe.toLocaleString()}</p>
+            </div>
+          </div>
+          <button onClick={() => setShowIncomeInput(true)} className="text-xs text-primary mt-2">Edit</button>
+        </motion.div>
+      )}
+
       {/* Total Spent Card */}
       <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
         className="rounded-2xl bg-primary p-5 text-primary-foreground">
-        <p className="text-sm opacity-80">This Month</p>
-        <p className="text-3xl font-bold font-display mt-1">
-          ${currentMonthSummary.totalSpent.toFixed(2)}
-        </p>
+        <div className="flex justify-between items-start">
+          <div>
+            <p className="text-sm opacity-80">Spent This Month</p>
+            <p className="text-3xl font-bold font-display mt-1">
+              Ksh {currentMonthSummary.totalSpent.toLocaleString()}
+            </p>
+          </div>
+          {monthIncome && (
+            <div className="text-right">
+              <p className="text-sm opacity-80">Balance</p>
+              <p className={`text-xl font-bold font-display ${balance < 0 ? 'text-red-200' : ''}`}>
+                Ksh {balance.toLocaleString()}
+              </p>
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-1 mt-2 text-sm opacity-90">
           {diff >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
           <span>{Math.abs(diffPercent).toFixed(1)}% vs last month</span>
@@ -66,7 +122,7 @@ export default function Dashboard() {
           className="stat-card">
           <Wallet className="w-5 h-5 text-primary mb-2" />
           <p className="text-xs text-muted-foreground">Daily Avg</p>
-          <p className="text-lg font-bold font-display">${currentMonthSummary.dailyAverage.toFixed(2)}</p>
+          <p className="text-lg font-bold font-display">Ksh {currentMonthSummary.dailyAverage.toFixed(0)}</p>
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
           className="stat-card">
@@ -76,7 +132,7 @@ export default function Dashboard() {
         </motion.div>
       </div>
 
-      {/* Spending by Category Pie */}
+      {/* Pie Chart */}
       {pieData.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
           className="stat-card">
@@ -90,9 +146,7 @@ export default function Dashboard() {
             <ResponsiveContainer width={120} height={120}>
               <PieChart>
                 <Pie data={pieData} cx="50%" cy="50%" innerRadius={30} outerRadius={55} dataKey="value" strokeWidth={2} stroke="hsl(var(--card))">
-                  {pieData.map((_, i) => (
-                    <Cell key={i} fill={chartColors[i % chartColors.length]} />
-                  ))}
+                  {pieData.map((_, i) => <Cell key={i} fill={chartColors[i % chartColors.length]} />)}
                 </Pie>
               </PieChart>
             </ResponsiveContainer>
@@ -121,7 +175,7 @@ export default function Dashboard() {
             <YAxis hide />
             <Tooltip
               contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
-              formatter={(v: number) => [`$${v.toFixed(2)}`, "Spent"]}
+              formatter={(v: number) => [`Ksh ${v.toLocaleString()}`, "Spent"]}
             />
             <Bar dataKey="amount" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
           </BarChart>
@@ -149,7 +203,7 @@ export default function Dashboard() {
                     <p className="font-medium text-sm truncate">{exp.name}</p>
                     <p className="text-xs text-muted-foreground">{cat?.name} · {format(new Date(exp.date), "MMM d")}</p>
                   </div>
-                  <p className="font-semibold text-sm">-${exp.amount.toFixed(2)}</p>
+                  <p className="font-semibold text-sm">-Ksh {exp.amount.toLocaleString()}</p>
                 </div>
               );
             })

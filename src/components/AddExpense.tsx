@@ -47,18 +47,18 @@ export default function AddExpense({ onClose }: { onClose?: () => void }) {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Amount - Big Input */}
+        {/* Amount */}
         <div className="text-center py-4">
-          <label className="text-sm text-muted-foreground">Amount</label>
+          <label className="text-sm text-muted-foreground">Amount (Ksh)</label>
           <div className="flex items-center justify-center gap-1 mt-1">
-            <span className="text-3xl font-display font-bold text-muted-foreground">$</span>
+            <span className="text-2xl font-display font-bold text-muted-foreground">Ksh</span>
             <input
               type="number"
-              step="0.01"
+              step="1"
               min="0"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              placeholder="0.00"
+              placeholder="0"
               className="text-4xl font-display font-bold bg-transparent border-none outline-none text-center w-48 text-foreground placeholder:text-muted-foreground/30"
             />
           </div>
@@ -69,18 +69,18 @@ export default function AddExpense({ onClose }: { onClose?: () => void }) {
         {/* Category Grid */}
         <div>
           <label className="text-sm text-muted-foreground mb-2 block">Category</label>
-          <div className="grid grid-cols-5 gap-2">
-            {categories.map((cat) => (
+          <div className="grid grid-cols-3 gap-2">
+            {categories.filter(c => c.id !== "tithe").map((cat) => (
               <button
                 key={cat.id}
                 type="button"
                 onClick={() => setCategory(cat.id)}
-                className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all text-center ${
+                className={`flex flex-col items-center gap-1 p-3 rounded-xl transition-all text-center ${
                   category === cat.id ? "bg-primary/10 ring-2 ring-primary" : "bg-muted hover:bg-muted/80"
                 }`}
               >
                 <span className="text-xl">{cat.icon}</span>
-                <span className="text-[10px] leading-tight text-muted-foreground">{cat.name}</span>
+                <span className="text-[11px] leading-tight text-muted-foreground">{cat.name}</span>
               </button>
             ))}
           </div>
