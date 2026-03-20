@@ -1,16 +1,29 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { ExpenseProvider } from "@/context/ExpenseContext";
+import Dashboard from "@/components/Dashboard";
+import AddExpense from "@/components/AddExpense";
+import Analytics from "@/components/Analytics";
+import MonthlyPlanner from "@/components/MonthlyPlanner";
+import ExpenseList from "@/components/ExpenseList";
+import CategoryManager from "@/components/CategoryManager";
+import BottomNav from "@/components/BottomNav";
+import { Routes, Route } from "react-router-dom";
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+export default function Index() {
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
-    </div>
+    <ExpenseProvider>
+      <div className="min-h-screen bg-background">
+        <main className="max-w-lg mx-auto px-4 pt-6">
+          <Routes>
+            <Route index element={<Dashboard />} />
+            <Route path="expenses" element={<ExpenseList />} />
+            <Route path="add" element={<AddExpense />} />
+            <Route path="analytics" element={<Analytics />} />
+            <Route path="planner" element={<MonthlyPlanner />} />
+            <Route path="categories" element={<CategoryManager />} />
+          </Routes>
+        </main>
+        <BottomNav />
+      </div>
+    </ExpenseProvider>
   );
-};
-
-const Index = PlaceholderIndex;
-
-export default Index;
+}
