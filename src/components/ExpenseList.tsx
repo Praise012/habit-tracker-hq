@@ -27,7 +27,6 @@ export default function ExpenseList() {
         </button>
       </motion.div>
 
-      {/* Search & Filter */}
       <div className="flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -36,30 +35,19 @@ export default function ExpenseList() {
         </div>
       </div>
 
-      {/* Category Chips */}
       <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-        <button
-          onClick={() => setFilterCat("")}
+        <button onClick={() => setFilterCat("")}
           className={`text-xs px-3 py-1.5 rounded-full whitespace-nowrap transition-colors ${
             !filterCat ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-          }`}
-        >
-          All
-        </button>
+          }`}>All</button>
         {categories.map((cat) => (
-          <button
-            key={cat.id}
-            onClick={() => setFilterCat(cat.id === filterCat ? "" : cat.id)}
+          <button key={cat.id} onClick={() => setFilterCat(cat.id === filterCat ? "" : cat.id)}
             className={`text-xs px-3 py-1.5 rounded-full whitespace-nowrap transition-colors ${
               filterCat === cat.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-            }`}
-          >
-            {cat.icon} {cat.name}
-          </button>
+            }`}>{cat.icon} {cat.name}</button>
         ))}
       </div>
 
-      {/* List */}
       <div className="space-y-2">
         {filtered.length === 0 ? (
           <p className="text-center text-muted-foreground py-12">No expenses found</p>
@@ -67,13 +55,8 @@ export default function ExpenseList() {
           filtered.map((exp, i) => {
             const cat = categories.find((c) => c.id === exp.category);
             return (
-              <motion.div
-                key={exp.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.02 }}
-                className="stat-card flex items-center gap-3"
-              >
+              <motion.div key={exp.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.02 }} className="stat-card flex items-center gap-3">
                 <span className="text-xl">{cat?.icon || "📦"}</span>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm truncate">{exp.name}</p>
@@ -82,7 +65,7 @@ export default function ExpenseList() {
                   </p>
                   {exp.notes && <p className="text-xs text-muted-foreground/70 truncate">{exp.notes}</p>}
                 </div>
-                <p className="font-semibold text-sm mr-2">-${exp.amount.toFixed(2)}</p>
+                <p className="font-semibold text-sm mr-2">-Ksh {exp.amount.toLocaleString()}</p>
                 <button onClick={() => deleteExpense(exp.id)}
                   className="p-1.5 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
                   <Trash2 className="w-4 h-4" />

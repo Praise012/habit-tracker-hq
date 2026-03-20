@@ -9,11 +9,12 @@ import { toast } from "sonner";
 import { Target, TrendingUp, AlertTriangle } from "lucide-react";
 
 export default function MonthlyPlanner() {
-  const { categories, getMonthSummary, getBudgetForMonth, setBudget } = useExpenseContext();
+  const { categories, getMonthSummary, getBudgetForMonth, setBudget, getIncomeForMonth } = useExpenseContext();
   const currentMonth = format(new Date(), "yyyy-MM");
   const summary = getMonthSummary(new Date());
   const prevSummary = getMonthSummary(subMonths(new Date(), 1));
   const existingBudget = getBudgetForMonth(currentMonth);
+  const income = getIncomeForMonth(currentMonth);
 
   const [budgetValues, setBudgetValues] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
@@ -48,26 +49,29 @@ export default function MonthlyPlanner() {
           <Target className="w-5 h-5" />
           <span className="text-sm opacity-80">Budget Overview</span>
         </div>
-        <div className="flex justify-between items-end">
+        <div className="grid grid-cols-3 gap-2">
           <div>
-            <p className="text-sm opacity-70">Spent</p>
-            <p className="text-2xl font-bold font-display">${summary.totalSpent.toFixed(0)}</p>
+            <p className="text-xs opacity-70">Income</p>
+            <p className="text-lg font-bold font-display">Ksh {(income?.income || 0).toLocaleString()}</p>
           </div>
-          <div className="text-right">
-            <p className="text-sm opacity-70">Budget</p>
-            <p className="text-2xl font-bold font-display">${totalBudget.toFixed(0)}</p>
+          <div>
+            <p className="text-xs opacity-70">Spent</p>
+            <p className="text-lg font-bold font-display">Ksh {summary.totalSpent.toLocaleString()}</p>
+          </div>
+          <div>
+            <p className="text-xs opacity-70">Budget</p>
+            <p className="text-lg font-bold font-display">Ksh {totalBudget.toLocaleString()}</p>
           </div>
         </div>
         {totalBudget > 0 && (
           <div className="mt-3">
             <div className="w-full h-2 rounded-full bg-primary-foreground/20">
-              <div
-                className="h-2 rounded-full bg-primary-foreground transition-all"
-                style={{ width: `${Math.min((summary.totalSpent / totalBudget) * 100, 100)}%` }}
-              />
+              <div className="h-2 rounded-full bg-primary-foreground transition-all"
+                style={{ width: `${Math.min((summary.totalSpent / totalBudget) * 100, 100)}%` }} />
             </div>
             <p className="text-xs mt-1 opacity-70">
               {((summary.totalSpent / totalBudget) * 100).toFixed(0)}% used
+              {summary.totalSpent > totalBudget * 0.9 && " ⚠️ Nearing limit!"}
             </p>
           </div>
         )}
@@ -85,11 +89,11 @@ export default function MonthlyPlanner() {
             {prevSummary.topCategories.slice(0, 3).map((cat) => (
               <div key={cat.name} className="flex items-center justify-between text-muted-foreground">
                 <span>Last month: {cat.name}</span>
-                <span className="font-medium text-foreground">${cat.amount.toFixed(0)}</span>
+                <span className="font-medium text-foreground">Ksh {cat.amount.toLocaleString()}</span>
               </div>
             ))}
             <p className="text-xs text-muted-foreground pt-1">
-              💡 Based on last month, consider setting your budget around ${(prevSummary.totalSpent * 0.95).toFixed(0)} to save 5%.
+              💡 Based on last month, consider setting your budget around Ksh {(prevSummary.totalSpent * 0.95).toLocaleString()} to save 5%.
             </p>
           </div>
         </motion.div>
@@ -104,33 +108,29 @@ export default function MonthlyPlanner() {
             const budget = parseFloat(budgetValues[cat.id]) || 0;
             const pct = budget > 0 ? (spent / budget) * 100 : 0;
             const overBudget = pct > 100;
+            const nearBudget = pct > 80 && pct <= 100;
 
             return (
               <div key={cat.id} className="stat-card space-y-2">
                 <div className="flex items-center gap-2">
                   <span>{cat.icon}</span>
                   <span className="font-medium text-sm flex-1">{cat.name}</span>
-                  {overBudget && <AlertTriangle className="w-4 h-4 text-warning" />}
+                  {overBudget && <AlertTriangle className="w-4 h-4 text-destructive" />}
+                  {nearBudget && <AlertTriangle className="w-4 h-4 text-accent" />}
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1 flex-1">
-                    <span className="text-xs text-muted-foreground">$</span>
-                    <Input
-                      type="number"
-                      min="0"
-                      placeholder="0"
-                      value={budgetValues[cat.id]}
+                    <span className="text-xs text-muted-foreground">Ksh</span>
+                    <Input type="number" min="0" placeholder="0" value={budgetValues[cat.id]}
                       onChange={(e) => setBudgetValues((prev) => ({ ...prev, [cat.id]: e.target.value }))}
-                      className="h-8 text-sm rounded-lg"
-                    />
+                      className="h-8 text-sm rounded-lg" />
                   </div>
-                  <span className="text-xs text-muted-foreground w-20 text-right">
-                    ${spent.toFixed(0)} spent
+                  <span className="text-xs text-muted-foreground w-24 text-right">
+                    Ksh {spent.toLocaleString()} spent
                   </span>
                 </div>
-                {budget > 0 && (
-                  <Progress value={Math.min(pct, 100)} className="h-1.5" />
-                )}
+                {budget > 0 && <Progress value={Math.min(pct, 100)} className="h-1.5" />}
+                {overBudget && <p className="text-xs text-destructive">Over budget by Ksh {(spent - budget).toLocaleString()}!</p>}
               </div>
             );
           })}
