@@ -6,8 +6,8 @@ import MonthlyPlanner from "@/components/MonthlyPlanner";
 import ExpenseList from "@/components/ExpenseList";
 import CategoryManager from "@/components/CategoryManager";
 import ShoppingList from "@/components/ShoppingList";
+import Settings from "@/components/Settings";
 import BottomNav from "@/components/BottomNav";
-import ThemeToggle from "@/components/ThemeToggle";
 import { Routes, Route } from "react-router-dom";
 
 export default function Index() {
