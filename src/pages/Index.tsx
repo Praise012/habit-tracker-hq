@@ -14,10 +14,7 @@ export default function Index() {
   return (
     <ExpenseProvider>
       <div className="min-h-screen bg-background">
-        <div className="max-w-lg mx-auto px-4 pt-2 flex justify-end">
-          <ThemeToggle />
-        </div>
-        <main className="max-w-lg mx-auto px-4">
+        <main className="max-w-lg mx-auto px-4 pt-4">
           <Routes>
             <Route index element={<Dashboard />} />
             <Route path="expenses" element={<ExpenseList />} />
