@@ -23,6 +23,7 @@ export default function Index() {
             <Route path="planner" element={<MonthlyPlanner />} />
             <Route path="categories" element={<CategoryManager />} />
             <Route path="shopping" element={<ShoppingList />} />
+            <Route path="settings" element={<Settings />} />
           </Routes>
         </main>
         <BottomNav />
