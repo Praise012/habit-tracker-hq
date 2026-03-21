@@ -6,18 +6,15 @@ import MonthlyPlanner from "@/components/MonthlyPlanner";
 import ExpenseList from "@/components/ExpenseList";
 import CategoryManager from "@/components/CategoryManager";
 import ShoppingList from "@/components/ShoppingList";
+import Settings from "@/components/Settings";
 import BottomNav from "@/components/BottomNav";
-import ThemeToggle from "@/components/ThemeToggle";
 import { Routes, Route } from "react-router-dom";
 
 export default function Index() {
   return (
     <ExpenseProvider>
       <div className="min-h-screen bg-background">
-        <div className="max-w-lg mx-auto px-4 pt-2 flex justify-end">
-          <ThemeToggle />
-        </div>
-        <main className="max-w-lg mx-auto px-4">
+        <main className="max-w-lg mx-auto px-4 pt-4">
           <Routes>
             <Route index element={<Dashboard />} />
             <Route path="expenses" element={<ExpenseList />} />
@@ -26,6 +23,7 @@ export default function Index() {
             <Route path="planner" element={<MonthlyPlanner />} />
             <Route path="categories" element={<CategoryManager />} />
             <Route path="shopping" element={<ShoppingList />} />
+            <Route path="settings" element={<Settings />} />
           </Routes>
         </main>
         <BottomNav />
