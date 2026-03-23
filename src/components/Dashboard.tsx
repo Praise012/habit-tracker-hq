@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { useExpenseContext } from "@/context/ExpenseContext";
 import { format, subMonths } from "date-fns";
-import { TrendingUp, TrendingDown, Wallet, Receipt, ArrowRight, DollarSign } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, Receipt, ArrowRight, DollarSign, Settings } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
@@ -54,9 +54,14 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6 pb-24">
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-1">
-        <p className="text-muted-foreground text-sm">{format(new Date(), "EEEE, MMMM d")}</p>
-        <h1 className="text-2xl font-bold font-display">Spending Overview</h1>
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between">
+        <div className="space-y-1">
+          <p className="text-muted-foreground text-sm">{format(new Date(), "EEEE, MMMM d")}</p>
+          <h1 className="text-2xl font-bold font-display">Spending Overview</h1>
+        </div>
+        <button onClick={() => navigate("/settings")} className="p-2 rounded-xl hover:bg-muted transition-colors">
+          <Settings className="w-5 h-5 text-muted-foreground" />
+        </button>
       </motion.div>
 
       {/* Income Card */}
