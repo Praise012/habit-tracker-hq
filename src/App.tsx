@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import PinLock from "@/components/PinLock";
 import { useState } from "react";
+import heroImg from "@/assets/hero-2.jpg";
 
 const queryClient = new QueryClient();
 
