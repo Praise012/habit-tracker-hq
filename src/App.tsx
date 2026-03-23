@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import PinLock from "@/components/PinLock";
 import { useState } from "react";
+import heroImg from "@/assets/hero-2.jpg";
 
 const queryClient = new QueryClient();
 
@@ -18,8 +19,14 @@ function AppContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground font-display">Loading...</div>
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center relative overflow-hidden">
+        <img src={heroImg} alt="SpendWise" className="absolute inset-0 w-full h-full object-cover opacity-30" />
+        <div className="relative z-10 flex flex-col items-center gap-4">
+          <div className="w-16 h-16 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-lg shadow-primary/30">
+            <span className="text-2xl font-bold">S</span>
+          </div>
+          <div className="animate-pulse text-foreground font-display text-xl font-bold">SpendWise</div>
+        </div>
       </div>
     );
   }
