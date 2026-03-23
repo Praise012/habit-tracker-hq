@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { useExpenseContext } from "@/context/ExpenseContext";
 import { format, subMonths } from "date-fns";
-import { TrendingUp, TrendingDown, Wallet, Receipt, ArrowRight, DollarSign } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, Receipt, ArrowRight, DollarSign, Settings } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
