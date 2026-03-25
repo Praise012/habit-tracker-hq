@@ -2,7 +2,7 @@ import { ExpenseProvider } from "@/context/ExpenseContext";
 import Dashboard from "@/components/Dashboard";
 import AddExpense from "@/components/AddExpense";
 import Analytics from "@/components/Analytics";
-import MonthlyPlanner from "@/components/MonthlyPlanner";
+import BudgetTracker from "@/components/BudgetTracker";
 import ExpenseList from "@/components/ExpenseList";
 import CategoryManager from "@/components/CategoryManager";
 import ShoppingList from "@/components/ShoppingList";
@@ -20,7 +20,7 @@ export default function Index() {
             <Route path="expenses" element={<ExpenseList />} />
             <Route path="add" element={<AddExpense />} />
             <Route path="analytics" element={<Analytics />} />
-            <Route path="planner" element={<MonthlyPlanner />} />
+            <Route path="planner" element={<BudgetTracker />} />
             <Route path="categories" element={<CategoryManager />} />
             <Route path="shopping" element={<ShoppingList />} />
             <Route path="settings" element={<Settings />} />
