@@ -6,7 +6,7 @@ const navItems = [
   { to: "/shopping", icon: ShoppingCart, label: "Shop" },
   { to: "/add", icon: Plus, label: "Add", isMain: true },
   { to: "/analytics", icon: BarChart3, label: "Analytics" },
-  { to: "/planner", icon: Calendar, label: "Planner" },
+  { to: "/planner", icon: Calendar, label: "Budget" },
 ];
 
 export default function BottomNav() {
