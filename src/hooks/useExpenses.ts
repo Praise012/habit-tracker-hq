@@ -93,6 +93,12 @@ export function useExpenses() {
     setShoppingItems((prev) => prev.map((i) => i.id === id ? { ...i, purchased: !i.purchased } : i));
   }, [user, shoppingItems]);
 
+  const updateShoppingItem = useCallback(async (id: string, updates: Partial<Pick<ShoppingItem, "name" | "price" | "quantity">>) => {
+    if (!user) return;
+    await supabase.from("shopping_items").update(updates).eq("id", id);
+    setShoppingItems((prev) => prev.map((i) => i.id === id ? { ...i, ...updates } : i));
+  }, [user]);
+
   const shoppingTotal = useMemo(() => {
     return shoppingItems.reduce((s, i) => s + i.price * i.quantity, 0);
   }, [shoppingItems]);
