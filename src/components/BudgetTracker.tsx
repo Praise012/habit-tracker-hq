@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Wallet, TrendingDown, TrendingUp, AlertTriangle, CheckCircle } from "lucide-react";
+import { Wallet, AlertTriangle, CheckCircle, PiggyBank } from "lucide-react";
 
 export default function BudgetTracker() {
   const { categories, getMonthSummary, getBudgetForMonth, setBudget, getIncomeForMonth } = useExpenseContext();
@@ -24,7 +24,8 @@ export default function BudgetTracker() {
   });
 
   const totalBudget = Object.values(budgetValues).reduce((s, v) => s + (parseFloat(v) || 0), 0);
-  const totalDiff = totalBudget - summary.totalSpent;
+  const totalSpent = summary.totalSpent;
+  const totalRemaining = totalBudget - totalSpent;
 
   const handleSave = () => {
     const catBudgets: Record<string, number> = {};
@@ -47,7 +48,7 @@ export default function BudgetTracker() {
         className="rounded-2xl bg-primary p-5 text-primary-foreground">
         <div className="flex items-center gap-2 mb-3">
           <Wallet className="w-5 h-5" />
-          <span className="text-sm opacity-80">Budget vs Actual</span>
+          <span className="text-sm opacity-80">Monthly Overview</span>
         </div>
         <div className="grid grid-cols-3 gap-2 mb-3">
           <div>
@@ -55,24 +56,24 @@ export default function BudgetTracker() {
             <p className="text-lg font-bold font-display">Ksh {totalBudget.toLocaleString()}</p>
           </div>
           <div>
-            <p className="text-xs opacity-70">Spent</p>
-            <p className="text-lg font-bold font-display">Ksh {summary.totalSpent.toLocaleString()}</p>
+            <p className="text-xs opacity-70">Total Spent</p>
+            <p className="text-lg font-bold font-display">Ksh {totalSpent.toLocaleString()}</p>
           </div>
           <div>
-            <p className="text-xs opacity-70">{totalDiff >= 0 ? "Remaining" : "Over by"}</p>
-            <p className={`text-lg font-bold font-display ${totalDiff < 0 ? "text-red-200" : ""}`}>
-              Ksh {Math.abs(totalDiff).toLocaleString()}
+            <p className="text-xs opacity-70">{totalRemaining >= 0 ? "Unspent" : "Over by"}</p>
+            <p className={`text-lg font-bold font-display ${totalRemaining < 0 ? "text-red-200" : ""}`}>
+              Ksh {Math.abs(totalRemaining).toLocaleString()}
             </p>
           </div>
         </div>
         {totalBudget > 0 && (
           <div>
             <div className="w-full h-2.5 rounded-full bg-primary-foreground/20">
-              <div className={`h-2.5 rounded-full transition-all ${summary.totalSpent > totalBudget ? "bg-red-300" : "bg-primary-foreground"}`}
-                style={{ width: `${Math.min((summary.totalSpent / totalBudget) * 100, 100)}%` }} />
+              <div className={`h-2.5 rounded-full transition-all ${totalSpent > totalBudget ? "bg-red-300" : "bg-primary-foreground"}`}
+                style={{ width: `${Math.min((totalSpent / totalBudget) * 100, 100)}%` }} />
             </div>
             <p className="text-xs mt-1 opacity-70">
-              {((summary.totalSpent / totalBudget) * 100).toFixed(0)}% of budget used
+              {((totalSpent / totalBudget) * 100).toFixed(0)}% of budget used
             </p>
           </div>
         )}
@@ -85,7 +86,7 @@ export default function BudgetTracker() {
           {categories.map((cat) => {
             const spent = summary.byCategory[cat.id] || 0;
             const budget = parseFloat(budgetValues[cat.id]) || 0;
-            const diff = budget - spent;
+            const remaining = budget - spent;
             const pct = budget > 0 ? (spent / budget) * 100 : 0;
             const overBudget = pct > 100;
             const nearBudget = pct > 80 && pct <= 100;
@@ -111,15 +112,15 @@ export default function BudgetTracker() {
                   </div>
                 </div>
 
-                {/* Spent vs Budget comparison */}
+                {/* Spent & Remaining */}
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">
                     Spent: <span className="font-semibold text-foreground">Ksh {spent.toLocaleString()}</span>
                   </span>
                   {budget > 0 && (
-                    <span className={`font-semibold flex items-center gap-1 ${diff >= 0 ? "text-primary" : "text-destructive"}`}>
-                      {diff >= 0 ? <TrendingDown className="w-3 h-3" /> : <TrendingUp className="w-3 h-3" />}
-                      {diff >= 0 ? `Ksh ${diff.toLocaleString()} left` : `Ksh ${Math.abs(diff).toLocaleString()} over`}
+                    <span className={`font-semibold flex items-center gap-1 ${remaining >= 0 ? "text-primary" : "text-destructive"}`}>
+                      <PiggyBank className="w-3 h-3" />
+                      {remaining >= 0 ? `Ksh ${remaining.toLocaleString()} unspent` : `Ksh ${Math.abs(remaining).toLocaleString()} over`}
                     </span>
                   )}
                 </div>

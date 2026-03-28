@@ -2,17 +2,33 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { useExpenseContext } from "@/context/ExpenseContext";
 import { ShoppingItem } from "@/types/expense";
-import { Plus, Trash2, Check, ShoppingCart, ArrowRight } from "lucide-react";
+import { Plus, Trash2, Check, ShoppingCart, ArrowRight, Pencil, X, Save, History } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { format } from "date-fns";
+
+interface PriceChange {
+  itemId: string;
+  itemName: string;
+  oldPrice: number;
+  newPrice: number;
+  timestamp: string;
+}
 
 export default function ShoppingList() {
-  const { shoppingItems, addShoppingItem, removeShoppingItem, toggleShoppingItem, shoppingTotal, addExpense } = useExpenseContext();
+  const { shoppingItems, addShoppingItem, removeShoppingItem, toggleShoppingItem, updateShoppingItem, shoppingTotal, addExpense } = useExpenseContext();
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [quantity, setQuantity] = useState("1");
+  const [priceChanges, setPriceChanges] = useState<PriceChange[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+
+  // Budget for shopping category
+  const { getBudgetForMonth } = useExpenseContext();
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const budget = getBudgetForMonth(currentMonth);
+  const shoppingBudget = budget?.categories["shopping"] || 0;
+  const unspent = shoppingBudget - shoppingTotal;
 
   const handleAdd = () => {
     if (!name.trim() || !price || parseFloat(price) <= 0) {
@@ -51,6 +67,16 @@ export default function ShoppingList() {
     toast.success(`Ksh ${total.toLocaleString()} recorded as Shopping expense`);
   };
 
+  const handleItemUpdate = (item: ShoppingItem, newName: string, newPrice: number, newQty: number) => {
+    if (item.price !== newPrice) {
+      setPriceChanges((prev) => [
+        { itemId: item.id, itemName: item.name, oldPrice: item.price, newPrice, timestamp: new Date().toISOString() },
+        ...prev,
+      ]);
+    }
+    updateShoppingItem(item.id, { name: newName, price: newPrice, quantity: newQty });
+  };
+
   const pending = shoppingItems.filter((i) => !i.purchased);
   const purchased = shoppingItems.filter((i) => i.purchased);
   const purchasedTotal = purchased.reduce((s, i) => s + i.price * i.quantity, 0);
@@ -73,6 +99,20 @@ export default function ShoppingList() {
           <ShoppingCart className="w-8 h-8 opacity-60" />
         </div>
         <p className="text-xs opacity-70 mt-1">{shoppingItems.length} items · {purchased.length} purchased</p>
+        {shoppingBudget > 0 && (
+          <div className="mt-2 pt-2 border-t border-primary-foreground/20">
+            <div className="flex justify-between text-xs">
+              <span className="opacity-70">Shopping Budget: Ksh {shoppingBudget.toLocaleString()}</span>
+              <span className={`font-semibold ${unspent >= 0 ? "" : "text-red-200"}`}>
+                {unspent >= 0 ? `Ksh ${unspent.toLocaleString()} unspent` : `Ksh ${Math.abs(unspent).toLocaleString()} over`}
+              </span>
+            </div>
+            <div className="w-full h-1.5 rounded-full bg-primary-foreground/20 mt-1">
+              <div className={`h-1.5 rounded-full transition-all ${shoppingTotal > shoppingBudget ? "bg-red-300" : "bg-primary-foreground"}`}
+                style={{ width: `${Math.min((shoppingTotal / shoppingBudget) * 100, 100)}%` }} />
+            </div>
+          </div>
+        )}
       </motion.div>
 
       {/* Add Item Form */}
@@ -97,7 +137,7 @@ export default function ShoppingList() {
           <h2 className="font-display font-semibold text-sm mb-2">To Buy ({pending.length})</h2>
           <div className="space-y-2">
             {pending.map((item) => (
-              <ItemRow key={item.id} item={item} onToggle={toggleShoppingItem} onDelete={removeShoppingItem} />
+              <EditableItemRow key={item.id} item={item} onToggle={toggleShoppingItem} onDelete={removeShoppingItem} onUpdate={handleItemUpdate} />
             ))}
           </div>
         </motion.div>
@@ -112,12 +152,37 @@ export default function ShoppingList() {
           </div>
           <div className="space-y-2">
             {purchased.map((item) => (
-              <ItemRow key={item.id} item={item} onToggle={toggleShoppingItem} onDelete={removeShoppingItem} />
+              <EditableItemRow key={item.id} item={item} onToggle={toggleShoppingItem} onDelete={removeShoppingItem} onUpdate={handleItemUpdate} />
             ))}
           </div>
           <Button onClick={handleRecordAsExpense} variant="outline" className="w-full mt-3 rounded-xl h-10">
             <ArrowRight className="w-4 h-4 mr-2" /> Record Purchased as Expense
           </Button>
+        </motion.div>
+      )}
+
+      {/* Price Change History */}
+      {priceChanges.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+          <button onClick={() => setShowHistory(!showHistory)}
+            className="flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors">
+            <History className="w-4 h-4" />
+            Price Changes ({priceChanges.length})
+          </button>
+          {showHistory && (
+            <div className="mt-2 space-y-1">
+              {priceChanges.map((ch, i) => (
+                <div key={i} className="stat-card flex items-center justify-between text-xs">
+                  <span className="font-medium">{ch.itemName}</span>
+                  <span>
+                    <span className="text-muted-foreground line-through">Ksh {ch.oldPrice.toLocaleString()}</span>
+                    {" → "}
+                    <span className="font-semibold text-foreground">Ksh {ch.newPrice.toLocaleString()}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </motion.div>
       )}
 
@@ -128,12 +193,58 @@ export default function ShoppingList() {
   );
 }
 
-function ItemRow({ item, onToggle, onDelete }: { item: ShoppingItem; onToggle: (id: string) => void; onDelete: (id: string) => void }) {
+function EditableItemRow({ item, onToggle, onDelete, onUpdate }: {
+  item: ShoppingItem;
+  onToggle: (id: string) => void;
+  onDelete: (id: string) => void;
+  onUpdate: (item: ShoppingItem, name: string, price: number, qty: number) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState(item.name);
+  const [editPrice, setEditPrice] = useState(item.price.toString());
+  const [editQty, setEditQty] = useState(item.quantity.toString());
+
+  const handleSave = () => {
+    const newPrice = parseFloat(editPrice) || item.price;
+    const newQty = parseInt(editQty) || item.quantity;
+    onUpdate(item, editName || item.name, newPrice, newQty);
+    setEditing(false);
+    toast.success("Item updated");
+  };
+
+  const handleCancel = () => {
+    setEditName(item.name);
+    setEditPrice(item.price.toString());
+    setEditQty(item.quantity.toString());
+    setEditing(false);
+  };
+
   const subtotal = item.price * item.quantity;
+
+  if (editing) {
+    return (
+      <div className="stat-card space-y-2">
+        <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-8 text-sm rounded-lg" placeholder="Name" />
+        <div className="flex gap-2">
+          <Input type="number" value={editPrice} onChange={(e) => setEditPrice(e.target.value)} className="h-8 text-sm rounded-lg flex-1" placeholder="Price" />
+          <Input type="number" value={editQty} onChange={(e) => setEditQty(e.target.value)} className="h-8 text-sm rounded-lg w-16" placeholder="Qty" />
+        </div>
+        <div className="flex gap-2">
+          <Button size="sm" onClick={handleSave} className="flex-1 h-8 rounded-lg text-xs">
+            <Save className="w-3 h-3 mr-1" /> Save
+          </Button>
+          <Button size="sm" variant="outline" onClick={handleCancel} className="h-8 rounded-lg text-xs">
+            <X className="w-3 h-3" />
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`stat-card flex items-center gap-3 ${item.purchased ? "opacity-60" : ""}`}>
       <button onClick={() => onToggle(item.id)}
-        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
           item.purchased ? "bg-primary border-primary text-primary-foreground" : "border-muted-foreground/30"
         }`}>
         {item.purchased && <Check className="w-3.5 h-3.5" />}
@@ -145,6 +256,10 @@ function ItemRow({ item, onToggle, onDelete }: { item: ShoppingItem; onToggle: (
         </p>
       </div>
       <p className="font-semibold text-sm">Ksh {subtotal.toLocaleString()}</p>
+      <button onClick={() => setEditing(true)}
+        className="p-1.5 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
+        <Pencil className="w-3.5 h-3.5" />
+      </button>
       <button onClick={() => onDelete(item.id)}
         className="p-1.5 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors">
         <Trash2 className="w-4 h-4" />
