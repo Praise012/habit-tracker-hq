@@ -9,8 +9,9 @@ import { toast } from "sonner";
 import { Wallet, AlertTriangle, CheckCircle, PiggyBank } from "lucide-react";
 
 export default function BudgetTracker() {
-  const { categories, getBudgetForMonth, setBudget } = useExpenseContext();
+  const { categories, getMonthSummary, getBudgetForMonth, setBudget } = useExpenseContext();
   const currentMonth = format(new Date(), "yyyy-MM");
+  const summary = getMonthSummary(new Date());
   const existingBudget = getBudgetForMonth(currentMonth);
 
   const [budgetValues, setBudgetValues] = useState<Record<string, string>>(() => {
@@ -21,17 +22,8 @@ export default function BudgetTracker() {
     return initial;
   });
 
-  // Manually entered spent amounts per category — starts at 0
-  const [spentValues, setSpentValues] = useState<Record<string, string>>(() => {
-    const initial: Record<string, string> = {};
-    categories.forEach((cat) => {
-      initial[cat.id] = "";
-    });
-    return initial;
-  });
-
   const totalBudget = Object.values(budgetValues).reduce((s, v) => s + (parseFloat(v) || 0), 0);
-  const totalSpent = Object.values(spentValues).reduce((s, v) => s + (parseFloat(v) || 0), 0);
+  const totalSpent = summary.totalSpent;
   const totalRemaining = totalBudget - totalSpent;
 
   const handleSave = () => {
@@ -91,8 +83,8 @@ export default function BudgetTracker() {
         <h2 className="font-display font-semibold mb-3">Category Breakdown</h2>
         <div className="space-y-3">
           {categories.map((cat) => {
+            const spent = summary.byCategory[cat.id] || 0;
             const budget = parseFloat(budgetValues[cat.id]) || 0;
-            const spent = parseFloat(spentValues[cat.id]) || 0;
             const remaining = budget - spent;
             const pct = budget > 0 ? (spent / budget) * 100 : 0;
             const overBudget = pct > 100;
@@ -119,26 +111,18 @@ export default function BudgetTracker() {
                   </div>
                 </div>
 
-                {/* Spent Input */}
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1 flex-1">
-                    <span className="text-xs text-muted-foreground">Spent:</span>
-                    <span className="text-xs text-muted-foreground">Ksh</span>
-                    <Input type="number" min="0" placeholder="0" value={spentValues[cat.id]}
-                      onChange={(e) => setSpentValues((prev) => ({ ...prev, [cat.id]: e.target.value }))}
-                      className="h-8 text-sm rounded-lg" />
-                  </div>
-                </div>
-
-                {/* Remaining */}
-                {budget > 0 && (
-                  <div className="flex items-center justify-between text-xs">
+                {/* Spent & Remaining */}
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">
+                    Spent: <span className="font-semibold text-foreground">Ksh {spent.toLocaleString()}</span>
+                  </span>
+                  {budget > 0 && (
                     <span className={`font-semibold flex items-center gap-1 ${remaining >= 0 ? "text-primary" : "text-destructive"}`}>
                       <PiggyBank className="w-3 h-3" />
                       {remaining >= 0 ? `Ksh ${remaining.toLocaleString()} unspent` : `Ksh ${Math.abs(remaining).toLocaleString()} over`}
                     </span>
-                  </div>
-                )}
+                  )}
+                </div>
 
                 {budget > 0 && <Progress value={Math.min(pct, 100)} className="h-1.5" />}
               </div>
