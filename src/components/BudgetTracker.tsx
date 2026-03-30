@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { Wallet, AlertTriangle, CheckCircle, PiggyBank } from "lucide-react";
 
 export default function BudgetTracker() {
-  const { categories, getMonthSummary, getBudgetForMonth, setBudget } = useExpenseContext();
+  const { categories, getMonthSummary, getMonthExpenses, getBudgetForMonth, setBudget } = useExpenseContext();
   const currentMonth = format(new Date(), "yyyy-MM");
   const summary = getMonthSummary(new Date());
   const existingBudget = getBudgetForMonth(currentMonth);
@@ -22,6 +22,36 @@ export default function BudgetTracker() {
     });
     return initial;
   });
+
+  const pushExpensesToBudget = () => {
+    const monthExpenses = getMonthExpenses(new Date());
+    const byCategory: Record<string, number> = {};
+    monthExpenses.forEach((e) => {
+      byCategory[e.category] = (byCategory[e.category] || 0) + e.amount;
+    });
+    const newBudgets: Record<string, string> = {};
+    categories.forEach((cat) => {
+      newBudgets[cat.id] = byCategory[cat.id]?.toString() || budgetValues[cat.id] || "";
+    });
+    setBudgetValues(newBudgets);
+    toast.success("Expenses pushed to budget allocations!");
+  };
+
+  const pushPrevMonthToBudget = () => {
+    const prevMonth = new Date();
+    prevMonth.setMonth(prevMonth.getMonth() - 1);
+    const prevExpenses = getMonthExpenses(prevMonth);
+    const byCategory: Record<string, number> = {};
+    prevExpenses.forEach((e) => {
+      byCategory[e.category] = (byCategory[e.category] || 0) + e.amount;
+    });
+    const newBudgets: Record<string, string> = {};
+    categories.forEach((cat) => {
+      newBudgets[cat.id] = byCategory[cat.id]?.toString() || budgetValues[cat.id] || "";
+    });
+    setBudgetValues(newBudgets);
+    toast.success("Last month's expenses pushed to budget!");
+  };
 
   // Spent values - manual input by user
   const [spentValues, setSpentValues] = useState<Record<string, string>>(() => {
