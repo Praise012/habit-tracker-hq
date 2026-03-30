@@ -14,6 +14,7 @@ export default function BudgetTracker() {
   const summary = getMonthSummary(new Date());
   const existingBudget = getBudgetForMonth(currentMonth);
 
+  // Budget (Allocated) values - pre-filled from saved budgets
   const [budgetValues, setBudgetValues] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
     categories.forEach((cat) => {
@@ -22,8 +23,17 @@ export default function BudgetTracker() {
     return initial;
   });
 
+  // Spent values - manual input by user
+  const [spentValues, setSpentValues] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {};
+    categories.forEach((cat) => {
+      initial[cat.id] = "";
+    });
+    return initial;
+  });
+
   const totalBudget = Object.values(budgetValues).reduce((s, v) => s + (parseFloat(v) || 0), 0);
-  const totalSpent = summary.totalSpent;
+  const totalSpent = Object.values(spentValues).reduce((s, v) => s + (parseFloat(v) || 0), 0);
   const totalRemaining = totalBudget - totalSpent;
 
   const handleSave = () => {
@@ -51,7 +61,7 @@ export default function BudgetTracker() {
         </div>
         <div className="grid grid-cols-3 gap-2 mb-3">
           <div>
-            <p className="text-xs opacity-70">Budget</p>
+            <p className="text-xs opacity-70">Allocated</p>
             <p className="text-lg font-bold font-display">Ksh {totalBudget.toLocaleString()}</p>
           </div>
           <div>
@@ -59,7 +69,7 @@ export default function BudgetTracker() {
             <p className="text-lg font-bold font-display">Ksh {totalSpent.toLocaleString()}</p>
           </div>
           <div>
-            <p className="text-xs opacity-70">{totalRemaining >= 0 ? "Unspent" : "Over by"}</p>
+            <p className="text-xs opacity-70">{totalRemaining >= 0 ? "Remaining" : "Over by"}</p>
             <p className={`text-lg font-bold font-display ${totalRemaining < 0 ? "text-red-200" : ""}`}>
               Ksh {Math.abs(totalRemaining).toLocaleString()}
             </p>
@@ -83,8 +93,8 @@ export default function BudgetTracker() {
         <h2 className="font-display font-semibold mb-3">Category Breakdown</h2>
         <div className="space-y-3">
           {categories.map((cat) => {
-            const spent = summary.byCategory[cat.id] || 0;
             const budget = parseFloat(budgetValues[cat.id]) || 0;
+            const spent = parseFloat(spentValues[cat.id]) || 0;
             const remaining = budget - spent;
             const pct = budget > 0 ? (spent / budget) * 100 : 0;
             const overBudget = pct > 100;
@@ -100,7 +110,7 @@ export default function BudgetTracker() {
                   {budget > 0 && !overBudget && !nearBudget && <CheckCircle className="w-4 h-4 text-primary" />}
                 </div>
 
-                {/* Budget Input */}
+                {/* Budget (Allocated) - editable */}
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1 flex-1">
                     <span className="text-xs text-muted-foreground">Budget:</span>
@@ -111,15 +121,26 @@ export default function BudgetTracker() {
                   </div>
                 </div>
 
-                {/* Spent & Remaining */}
+                {/* Spent - manual input */}
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1 flex-1">
+                    <span className="text-xs text-muted-foreground">Spent:</span>
+                    <span className="text-xs text-muted-foreground">Ksh</span>
+                    <Input type="number" min="0" placeholder="0" value={spentValues[cat.id]}
+                      onChange={(e) => setSpentValues((prev) => ({ ...prev, [cat.id]: e.target.value }))}
+                      className="h-8 text-sm rounded-lg" />
+                  </div>
+                </div>
+
+                {/* Remaining */}
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">
-                    Spent: <span className="font-semibold text-foreground">Ksh {spent.toLocaleString()}</span>
+                    Allocated: <span className="font-semibold text-foreground">Ksh {budget.toLocaleString()}</span>
                   </span>
                   {budget > 0 && (
                     <span className={`font-semibold flex items-center gap-1 ${remaining >= 0 ? "text-primary" : "text-destructive"}`}>
                       <PiggyBank className="w-3 h-3" />
-                      {remaining >= 0 ? `Ksh ${remaining.toLocaleString()} unspent` : `Ksh ${Math.abs(remaining).toLocaleString()} over`}
+                      {remaining >= 0 ? `Ksh ${remaining.toLocaleString()} remaining` : `Ksh ${Math.abs(remaining).toLocaleString()} over`}
                     </span>
                   )}
                 </div>
