@@ -1,19 +1,21 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useExpenseContext } from "@/context/ExpenseContext";
-import { format, subMonths, addMonths } from "date-fns";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, LineChart, Line } from "recharts";
+import { format, subMonths, addMonths, parseISO } from "date-fns";
+import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown } from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, LineChart, Line, CartesianGrid, Legend } from "recharts";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const COLORS = [
-  "hsl(220, 70%, 55%)", "hsl(320, 60%, 50%)", "hsl(45, 80%, 50%)",
-  "hsl(35, 90%, 55%)", "hsl(200, 65%, 50%)", "hsl(0, 72%, 51%)",
-  "hsl(280, 60%, 55%)", "hsl(190, 70%, 45%)", "hsl(160, 60%, 38%)",
+  "hsl(160, 60%, 38%)", "hsl(35, 90%, 55%)", "hsl(220, 70%, 55%)",
+  "hsl(280, 60%, 55%)", "hsl(190, 70%, 45%)", "hsl(0, 72%, 51%)",
+  "hsl(320, 60%, 50%)", "hsl(45, 80%, 50%)", "hsl(200, 65%, 50%)",
 ];
 
 export default function Analytics() {
-  const { getMonthSummary, categories, getIncomeForMonth } = useExpenseContext();
+  const { getMonthSummary, categories, getIncomeForMonth, expenses } = useExpenseContext();
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [trendCategory, setTrendCategory] = useState("all");
 
   const summary = getMonthSummary(currentMonth);
   const prevSummary = getMonthSummary(subMonths(currentMonth, 1));
@@ -22,12 +24,51 @@ export default function Analytics() {
 
   const pieData = summary.topCategories.map((c) => ({ name: c.name, value: c.amount }));
 
-  const monthlyTrend = Array.from({ length: 6 }, (_, i) => {
-    const m = subMonths(currentMonth, 5 - i);
-    const s = getMonthSummary(m);
-    const inc = getIncomeForMonth(format(m, "yyyy-MM"));
-    return { month: format(m, "MMM"), spent: s.totalSpent, income: inc?.income || 0 };
-  });
+  // 12-month trend data with optional category filter
+  const trendData = useMemo(() => {
+    return Array.from({ length: 12 }, (_, i) => {
+      const m = subMonths(currentMonth, 11 - i);
+      const s = getMonthSummary(m);
+      const inc = getIncomeForMonth(format(m, "yyyy-MM"));
+      const spent = trendCategory === "all"
+        ? s.totalSpent
+        : (s.byCategory[trendCategory] || 0);
+      return {
+        month: format(m, "MMM"),
+        fullMonth: format(m, "yyyy-MM"),
+        spent,
+        income: inc?.income || 0,
+      };
+    });
+  }, [currentMonth, trendCategory, getMonthSummary, getIncomeForMonth]);
+
+  // Shopping item breakdown for tracking price changes
+  const shoppingBreakdown = useMemo(() => {
+    const shoppingExpenses = expenses.filter((e) => e.category === "shopping");
+    const itemMap: Record<string, { name: string; prices: { month: string; amount: number; date: string }[] }> = {};
+
+    shoppingExpenses.forEach((e) => {
+      const key = e.name.toLowerCase().trim();
+      if (!itemMap[key]) itemMap[key] = { name: e.name, prices: [] };
+      itemMap[key].prices.push({
+        month: format(parseISO(e.date), "MMM yyyy"),
+        amount: e.amount,
+        date: e.date,
+      });
+    });
+
+    return Object.values(itemMap)
+      .filter((item) => item.prices.length >= 1)
+      .sort((a, b) => b.prices.length - a.prices.length)
+      .slice(0, 15)
+      .map((item) => {
+        const sorted = [...item.prices].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        const latest = sorted[sorted.length - 1].amount;
+        const first = sorted[0].amount;
+        const change = sorted.length > 1 ? ((latest - first) / first) * 100 : 0;
+        return { ...item, prices: sorted, change, latest };
+      });
+  }, [expenses]);
 
   const categoryComparison = Object.entries(summary.byCategory)
     .sort(([, a], [, b]) => b - a)
@@ -37,6 +78,8 @@ export default function Analytics() {
       const prevAmount = prevSummary.byCategory[catId] || 0;
       return { name: cat?.name || catId, current: amount, previous: prevAmount };
     });
+
+  const selectedCatName = trendCategory === "all" ? "All Categories" : categories.find((c) => c.id === trendCategory)?.name || trendCategory;
 
   return (
     <div className="space-y-6 pb-24">
@@ -95,11 +138,48 @@ export default function Analytics() {
         </motion.div>
       )}
 
-      {/* Income vs Expenditure Trend */}
+      {/* Spending Trends with Category Filter */}
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="stat-card">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-display font-semibold">Spending Trends</h2>
+        </div>
+        <Select value={trendCategory} onValueChange={setTrendCategory}>
+          <SelectTrigger className="mb-3 h-9 text-sm">
+            <SelectValue placeholder="Filter by category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            {categories.map((cat) => (
+              <SelectItem key={cat.id} value={cat.id}>
+                {cat.icon} {cat.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <ResponsiveContainer width="100%" height={200}>
+          <LineChart data={trendData}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} width={50}
+              tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v} />
+            <Tooltip formatter={(v: number) => [`Ksh ${v.toLocaleString()}`]}
+              contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
+            <Line type="monotone" dataKey="spent" stroke="hsl(var(--primary))" strokeWidth={2.5}
+              dot={{ fill: "hsl(var(--primary))", r: 3 }} name={selectedCatName} />
+            {trendCategory === "all" && (
+              <Line type="monotone" dataKey="income" stroke="hsl(var(--chart-2))" strokeWidth={2}
+                strokeDasharray="5 5" dot={{ fill: "hsl(var(--chart-2))", r: 3 }} name="Income" />
+            )}
+            <Legend />
+          </LineChart>
+        </ResponsiveContainer>
+      </motion.div>
+
+      {/* Income vs Expenditure Bar Chart */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25 }} className="stat-card">
         <h2 className="font-display font-semibold mb-3">Income vs Spending</h2>
         <ResponsiveContainer width="100%" height={160}>
-          <BarChart data={monthlyTrend}>
+          <BarChart data={trendData.slice(-6)}>
             <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} />
             <YAxis hide />
             <Tooltip formatter={(v: number) => [`Ksh ${v.toLocaleString()}`]}
@@ -112,7 +192,7 @@ export default function Analytics() {
 
       {/* Category Comparison */}
       {categoryComparison.length > 0 && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25 }} className="stat-card">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="stat-card">
           <h2 className="font-display font-semibold mb-3">vs Last Month</h2>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={categoryComparison} layout="vertical">
@@ -125,6 +205,43 @@ export default function Analytics() {
               <Bar dataKey="current" fill="hsl(var(--primary))" radius={[4, 4, 4, 4]} barSize={10} name="This Month" />
             </BarChart>
           </ResponsiveContainer>
+        </motion.div>
+      )}
+
+      {/* Shopping Item Price Tracking */}
+      {shoppingBreakdown.length > 0 && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35 }} className="stat-card">
+          <h2 className="font-display font-semibold mb-3">🛍️ Shopping Price Tracker</h2>
+          <p className="text-xs text-muted-foreground mb-3">Track price changes on recurring shopping items</p>
+          <div className="space-y-3">
+            {shoppingBreakdown.map((item) => (
+              <div key={item.name} className="rounded-xl border border-border bg-card p-3 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium truncate flex-1">{item.name}</span>
+                  <span className="text-sm font-bold font-display ml-2">Ksh {item.latest.toLocaleString()}</span>
+                </div>
+                {item.prices.length > 1 && (
+                  <div className="flex items-center gap-1.5">
+                    {item.change > 0 ? (
+                      <TrendingUp className="w-3.5 h-3.5 text-destructive" />
+                    ) : item.change < 0 ? (
+                      <TrendingDown className="w-3.5 h-3.5 text-primary" />
+                    ) : null}
+                    <span className={`text-xs font-medium ${item.change > 0 ? "text-destructive" : item.change < 0 ? "text-primary" : "text-muted-foreground"}`}>
+                      {item.change > 0 ? "+" : ""}{item.change.toFixed(1)}% since first purchase
+                    </span>
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-1.5">
+                  {item.prices.map((p, i) => (
+                    <span key={i} className="text-[10px] bg-muted px-1.5 py-0.5 rounded-md text-muted-foreground">
+                      {p.month}: Ksh {p.amount.toLocaleString()}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </motion.div>
       )}
 
