@@ -118,6 +118,19 @@ export default function BudgetTracker() {
         )}
       </motion.div>
 
+      {/* Push Buttons */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
+        className="flex gap-2">
+        <Button onClick={pushExpensesToBudget} variant="outline" className="flex-1 h-11 rounded-xl gap-2">
+          <ArrowDownToLine className="w-4 h-4" />
+          Push This Month
+        </Button>
+        <Button onClick={pushPrevMonthToBudget} variant="outline" className="flex-1 h-11 rounded-xl gap-2">
+          <History className="w-4 h-4" />
+          Push Last Month
+        </Button>
+      </motion.div>
+
       {/* Per-Category Tracking */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
         <h2 className="font-display font-semibold mb-3">Category Breakdown</h2>
