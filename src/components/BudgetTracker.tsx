@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Wallet, AlertTriangle, CheckCircle, PiggyBank } from "lucide-react";
+import { Wallet, AlertTriangle, CheckCircle, PiggyBank, ArrowDownToLine, History } from "lucide-react";
 
 export default function BudgetTracker() {
   const { categories, getMonthSummary, getMonthExpenses, getBudgetForMonth, setBudget } = useExpenseContext();
