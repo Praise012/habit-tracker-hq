@@ -30,7 +30,7 @@ export function useExpenses() {
       })));
       if (shopRes.data) setShoppingItems(shopRes.data.map((s) => ({
         id: s.id, name: s.name, price: Number(s.price), quantity: s.quantity,
-        purchased: s.purchased, date: s.date,
+        purchased: s.purchased, recorded: (s as any).recorded ?? false, date: s.date,
       })));
       if (budRes.data) setBudgets(budRes.data.map((b) => ({
         month: b.month, categories: b.categories as Record<string, number>, totalBudget: Number(b.total_budget),
