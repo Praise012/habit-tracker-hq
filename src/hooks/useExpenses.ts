@@ -215,6 +215,6 @@ export function useExpenses() {
     setBudget, getBudgetForMonth,
     getMonthExpenses, getMonthSummary,
     currentMonthSummary, exportCSV,
-    shoppingItems, addShoppingItem, removeShoppingItem, toggleShoppingItem, updateShoppingItem, shoppingTotal,
+    shoppingItems, addShoppingItem, removeShoppingItem, toggleShoppingItem, updateShoppingItem, markShoppingItemsRecorded, shoppingTotal,
   };
 }
