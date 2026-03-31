@@ -98,8 +98,16 @@ export default function BudgetTracker() {
   return (
     <div className="space-y-6 pb-24">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-2xl font-bold font-display">Budget Tracker</h1>
-        <p className="text-sm text-muted-foreground">{format(new Date(), "MMMM yyyy")}</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold font-display">Budget Tracker</h1>
+            <p className="text-sm text-muted-foreground">{format(new Date(), "MMMM yyyy")}</p>
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+            <span>Synced</span>
+          </div>
+        </div>
       </motion.div>
 
       {/* Summary Card */}
