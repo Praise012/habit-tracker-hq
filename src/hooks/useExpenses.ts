@@ -30,7 +30,7 @@ export function useExpenses() {
       })));
       if (shopRes.data) setShoppingItems(shopRes.data.map((s) => ({
         id: s.id, name: s.name, price: Number(s.price), quantity: s.quantity,
-        purchased: s.purchased, date: s.date,
+        purchased: s.purchased, recorded: (s as any).recorded ?? false, date: s.date,
       })));
       if (budRes.data) setBudgets(budRes.data.map((b) => ({
         month: b.month, categories: b.categories as Record<string, number>, totalBudget: Number(b.total_budget),
@@ -74,7 +74,7 @@ export function useExpenses() {
     if (data && !error) {
       setShoppingItems((prev) => [{
         id: data.id, name: data.name, price: Number(data.price),
-        quantity: data.quantity, purchased: data.purchased, date: data.date,
+        quantity: data.quantity, purchased: data.purchased, recorded: false, date: data.date,
       }, ...prev]);
     }
   }, [user]);
@@ -97,6 +97,12 @@ export function useExpenses() {
     if (!user) return;
     await supabase.from("shopping_items").update(updates).eq("id", id);
     setShoppingItems((prev) => prev.map((i) => i.id === id ? { ...i, ...updates } : i));
+  }, [user]);
+
+  const markShoppingItemsRecorded = useCallback(async (ids: string[]) => {
+    if (!user || ids.length === 0) return;
+    await supabase.from("shopping_items").update({ recorded: true } as any).in("id", ids);
+    setShoppingItems((prev) => prev.map((i) => ids.includes(i.id) ? { ...i, recorded: true } : i));
   }, [user]);
 
   const shoppingTotal = useMemo(() => {
@@ -209,6 +215,6 @@ export function useExpenses() {
     setBudget, getBudgetForMonth,
     getMonthExpenses, getMonthSummary,
     currentMonthSummary, exportCSV,
-    shoppingItems, addShoppingItem, removeShoppingItem, toggleShoppingItem, updateShoppingItem, shoppingTotal,
+    shoppingItems, addShoppingItem, removeShoppingItem, toggleShoppingItem, updateShoppingItem, markShoppingItemsRecorded, shoppingTotal,
   };
 }

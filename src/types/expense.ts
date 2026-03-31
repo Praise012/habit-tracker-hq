@@ -14,6 +14,7 @@ export interface ShoppingItem {
   price: number;
   quantity: number;
   purchased: boolean;
+  recorded: boolean;
   date: string; // ISO string
 }
 

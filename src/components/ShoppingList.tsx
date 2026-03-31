@@ -2,12 +2,14 @@ import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useExpenseContext } from "@/context/ExpenseContext";
 import { ShoppingItem } from "@/types/expense";
-import { Plus, Trash2, Check, ShoppingCart, ArrowRight, Pencil, X, Save, History, ChevronLeft, ChevronRight, TrendingUp, TrendingDown } from "lucide-react";
+import { Plus, Trash2, Check, ShoppingCart, ArrowRight, Pencil, X, Save, History, ChevronLeft, ChevronRight, TrendingUp, TrendingDown, ArrowLeft, CheckCircle2, Shield } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { format, subMonths, addMonths, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
+import { useNavigate } from "react-router-dom";
 
 interface PriceChange {
   itemId: string;
@@ -21,8 +23,10 @@ export default function ShoppingList() {
   const {
     shoppingItems, addShoppingItem, removeShoppingItem, toggleShoppingItem,
     updateShoppingItem, shoppingTotal, addExpense, getBudgetForMonth, expenses,
+    markShoppingItemsRecorded,
   } = useExpenseContext();
 
+  const navigate = useNavigate();
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [quantity, setQuantity] = useState("1");
@@ -54,15 +58,12 @@ export default function ShoppingList() {
   const monthTotal = useMemo(() => monthItems.reduce((s, i) => s + i.price * i.quantity, 0), [monthItems]);
   const unspent = shoppingBudget - monthTotal;
 
-  // Price trends: track item prices across months
+  // Price trends
   const priceTrends = useMemo(() => {
-    // Group all shopping expenses by item name
     const shoppingExpenses = expenses.filter((e) => e.category === "shopping");
     const itemMap: Record<string, { month: string; amount: number }[]> = {};
-
     shoppingExpenses.forEach((e) => {
       const month = e.date.slice(0, 7);
-      // Extract individual items from shopping expense names
       const names = e.name.replace("Shopping: ", "").split(", ");
       names.forEach((n) => {
         const key = n.trim().toLowerCase();
@@ -71,15 +72,12 @@ export default function ShoppingList() {
         itemMap[key].push({ month, amount: e.amount / names.length });
       });
     });
-
-    // Also use shopping_items for granular tracking
     shoppingItems.forEach((item) => {
       const key = item.name.trim().toLowerCase();
       const month = item.date.slice(0, 7);
       if (!itemMap[key]) itemMap[key] = [];
       itemMap[key].push({ month, amount: item.price });
     });
-
     return Object.entries(itemMap)
       .filter(([, entries]) => entries.length > 1)
       .map(([itemName, entries]) => {
@@ -87,13 +85,7 @@ export default function ShoppingList() {
         const first = sorted[0].amount;
         const latest = sorted[sorted.length - 1].amount;
         const change = ((latest - first) / first) * 100;
-        return {
-          name: itemName,
-          firstPrice: first,
-          latestPrice: latest,
-          change,
-          entries: sorted,
-        };
+        return { name: itemName, firstPrice: first, latestPrice: latest, change, entries: sorted };
       })
       .sort((a, b) => Math.abs(b.change) - Math.abs(a.change));
   }, [expenses, shoppingItems]);
@@ -108,6 +100,7 @@ export default function ShoppingList() {
       price: parseFloat(price),
       quantity: parseInt(quantity) || 1,
       purchased: false,
+      recorded: false,
       date: new Date().toISOString(),
     });
     setName("");
@@ -117,9 +110,9 @@ export default function ShoppingList() {
   };
 
   const handleRecordAsExpense = () => {
-    const purchasedItems = monthItems.filter((i) => i.purchased);
+    const purchasedItems = monthItems.filter((i) => i.purchased && !i.recorded);
     if (purchasedItems.length === 0) {
-      toast.error("Check off purchased items first");
+      toast.error("No unrecorded purchased items to sync");
       return;
     }
     const total = purchasedItems.reduce((s, i) => s + i.price * i.quantity, 0);
@@ -131,7 +124,8 @@ export default function ShoppingList() {
       date: new Date().toISOString(),
       notes: `${purchasedItems.length} items`,
     });
-    purchasedItems.forEach((i) => removeShoppingItem(i.id));
+    // Mark as recorded instead of deleting
+    markShoppingItemsRecorded(purchasedItems.map((i) => i.id));
     toast.success(`Ksh ${total.toLocaleString()} recorded as Shopping expense`);
   };
 
@@ -146,8 +140,10 @@ export default function ShoppingList() {
   };
 
   const pending = monthItems.filter((i) => !i.purchased);
-  const purchased = monthItems.filter((i) => i.purchased);
+  const purchased = monthItems.filter((i) => i.purchased && !i.recorded);
+  const recorded = monthItems.filter((i) => i.recorded);
   const purchasedTotal = purchased.reduce((s, i) => s + i.price * i.quantity, 0);
+  const recordedTotal = recorded.reduce((s, i) => s + i.price * i.quantity, 0);
 
   return (
     <div className="space-y-5 pb-24">
@@ -173,7 +169,7 @@ export default function ShoppingList() {
         </button>
       </motion.div>
 
-      {/* Budget-synced Banner */}
+      {/* Budget-synced Banner with Back to Budget link */}
       <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
         className="rounded-2xl bg-primary p-4 text-primary-foreground">
         <div className="flex justify-between items-center">
@@ -183,9 +179,8 @@ export default function ShoppingList() {
           </div>
           <ShoppingCart className="w-8 h-8 opacity-60" />
         </div>
-        <p className="text-xs opacity-70 mt-1">{monthItems.length} items · {purchased.length} purchased</p>
+        <p className="text-xs opacity-70 mt-1">{monthItems.length} items · {purchased.length + recorded.length} purchased</p>
 
-        {/* Budget sync from Module A */}
         {shoppingBudget > 0 && (
           <div className="mt-2 pt-2 border-t border-primary-foreground/20">
             <div className="flex justify-between text-xs">
@@ -206,9 +201,28 @@ export default function ShoppingList() {
         {shoppingBudget === 0 && (
           <p className="text-[10px] mt-2 opacity-60">No shopping budget set — go to Budget Tracker to allocate</p>
         )}
+
+        {/* Back to Budget link */}
+        <button onClick={() => navigate("/planner")}
+          className="flex items-center gap-1.5 mt-2 text-xs font-semibold opacity-80 hover:opacity-100 transition-opacity">
+          <ArrowLeft className="w-3.5 h-3.5" />
+          Back to Budget
+        </button>
       </motion.div>
 
-      {/* Add Item Form - only for current month */}
+      {/* Sync indicator */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.07 }}
+        className="flex items-center gap-2 text-xs text-muted-foreground px-1">
+        <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+        <span>Synced with Master Budget</span>
+        {recorded.length > 0 && (
+          <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 ml-auto">
+            {recorded.length} recorded
+          </Badge>
+        )}
+      </motion.div>
+
+      {/* Add Item Form */}
       {isCurrentMonth && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
           className="stat-card space-y-3">
@@ -239,7 +253,7 @@ export default function ShoppingList() {
         </motion.div>
       )}
 
-      {/* Purchased Items */}
+      {/* Purchased (not yet recorded) Items */}
       {purchased.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <div className="flex items-center justify-between mb-2">
@@ -260,7 +274,25 @@ export default function ShoppingList() {
         </motion.div>
       )}
 
-      {/* Price Change History (session) */}
+      {/* Recorded/Archived Items - Read-only */}
+      {recorded.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <h2 className="font-display font-semibold text-sm">Recorded ({recorded.length})</h2>
+              <Shield className="w-3.5 h-3.5 text-muted-foreground" />
+            </div>
+            <span className="text-sm font-semibold text-primary">Ksh {recordedTotal.toLocaleString()}</span>
+          </div>
+          <div className="space-y-2">
+            {recorded.map((item) => (
+              <RecordedItemRow key={item.id} item={item} />
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Price Change History */}
       {priceChanges.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
           <button onClick={() => setShowHistory(!showHistory)}
@@ -285,7 +317,7 @@ export default function ShoppingList() {
         </motion.div>
       )}
 
-      {/* Price Trends Across Months */}
+      {/* Price Trends */}
       {priceTrends.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
           <button onClick={() => setShowTrends(!showTrends)}
@@ -327,6 +359,30 @@ export default function ShoppingList() {
           {isCurrentMonth ? "No items yet. Add your shopping list above!" : `No shopping items for ${format(selectedMonth, "MMMM yyyy")}`}
         </p>
       )}
+    </div>
+  );
+}
+
+/** Read-only row for recorded/archived items */
+function RecordedItemRow({ item }: { item: ShoppingItem }) {
+  const subtotal = item.price * item.quantity;
+  return (
+    <div className="stat-card flex items-center gap-3 opacity-70">
+      <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+        <Check className="w-3.5 h-3.5 text-primary" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5">
+          <p className="font-medium text-sm line-through">{item.name}</p>
+          <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5 border-primary/30 text-primary">
+            Recorded
+          </Badge>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Ksh {item.price.toLocaleString()} × {item.quantity}
+        </p>
+      </div>
+      <p className="font-semibold text-sm">Ksh {subtotal.toLocaleString()}</p>
     </div>
   );
 }

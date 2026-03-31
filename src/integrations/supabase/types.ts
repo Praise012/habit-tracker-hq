@@ -137,6 +137,7 @@ export type Database = {
           price: number
           purchased: boolean
           quantity: number
+          recorded: boolean
           user_id: string
         }
         Insert: {
@@ -147,6 +148,7 @@ export type Database = {
           price: number
           purchased?: boolean
           quantity?: number
+          recorded?: boolean
           user_id: string
         }
         Update: {
@@ -157,6 +159,7 @@ export type Database = {
           price?: number
           purchased?: boolean
           quantity?: number
+          recorded?: boolean
           user_id?: string
         }
         Relationships: []

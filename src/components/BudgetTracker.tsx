@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Wallet, AlertTriangle, CheckCircle, PiggyBank, ArrowDownToLine, History, ShoppingCart, Lock } from "lucide-react";
+import { Wallet, AlertTriangle, CheckCircle, PiggyBank, ArrowDownToLine, History, ShoppingCart, Lock, Eye, CheckCircle2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export default function BudgetTracker() {
@@ -98,8 +98,16 @@ export default function BudgetTracker() {
   return (
     <div className="space-y-6 pb-24">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-2xl font-bold font-display">Budget Tracker</h1>
-        <p className="text-sm text-muted-foreground">{format(new Date(), "MMMM yyyy")}</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold font-display">Budget Tracker</h1>
+            <p className="text-sm text-muted-foreground">{format(new Date(), "MMMM yyyy")}</p>
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+            <span>Synced</span>
+          </div>
+        </div>
       </motion.div>
 
       {/* Summary Card */}
@@ -221,13 +229,20 @@ export default function BudgetTracker() {
 
                 {budget > 0 && <Progress value={Math.min(pct, 100)} className="h-1.5" />}
 
-                {/* Push to Shopping List button for shopping category */}
+                {/* Buttons for shopping category */}
                 {isShopping && budget > 0 && (
-                  <Button onClick={handlePushToShoppingList} variant="outline" size="sm"
-                    className="w-full mt-1 rounded-lg h-8 text-xs gap-1.5">
-                    <ShoppingCart className="w-3.5 h-3.5" />
-                    Open Shopping List
-                  </Button>
+                  <div className="flex gap-2 mt-1">
+                    <Button onClick={handlePushToShoppingList} variant="outline" size="sm"
+                      className="flex-1 rounded-lg h-8 text-xs gap-1.5">
+                      <ShoppingCart className="w-3.5 h-3.5" />
+                      Open Shopping List
+                    </Button>
+                    <Button onClick={() => navigate("/shopping")} variant="ghost" size="sm"
+                      className="rounded-lg h-8 text-xs gap-1.5">
+                      <Eye className="w-3.5 h-3.5" />
+                      View List
+                    </Button>
+                  </div>
                 )}
               </div>
             );
