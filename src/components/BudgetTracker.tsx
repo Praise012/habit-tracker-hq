@@ -1,17 +1,18 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useExpenseContext } from "@/context/ExpenseContext";
-import { format } from "date-fns";
+import { format, subMonths } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Wallet, AlertTriangle, CheckCircle, PiggyBank, ArrowDownToLine, History } from "lucide-react";
+import { Wallet, AlertTriangle, CheckCircle, PiggyBank, ArrowDownToLine, History, ShoppingCart, Lock } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function BudgetTracker() {
-  const { categories, getMonthSummary, getMonthExpenses, getBudgetForMonth, setBudget } = useExpenseContext();
+  const { categories, getMonthSummary, getMonthExpenses, getBudgetForMonth, setBudget, shoppingTotal } = useExpenseContext();
+  const navigate = useNavigate();
   const currentMonth = format(new Date(), "yyyy-MM");
-  const summary = getMonthSummary(new Date());
   const existingBudget = getBudgetForMonth(currentMonth);
 
   // Budget (Allocated) values - pre-filled from saved budgets
@@ -19,6 +20,15 @@ export default function BudgetTracker() {
     const initial: Record<string, string> = {};
     categories.forEach((cat) => {
       initial[cat.id] = existingBudget?.categories[cat.id]?.toString() || "";
+    });
+    return initial;
+  });
+
+  // Spent values - manual input (except shopping which is auto-calculated)
+  const [spentValues, setSpentValues] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {};
+    categories.forEach((cat) => {
+      initial[cat.id] = "";
     });
     return initial;
   });
@@ -38,8 +48,7 @@ export default function BudgetTracker() {
   };
 
   const pushPrevMonthToBudget = () => {
-    const prevMonth = new Date();
-    prevMonth.setMonth(prevMonth.getMonth() - 1);
+    const prevMonth = subMonths(new Date(), 1);
     const prevExpenses = getMonthExpenses(prevMonth);
     const byCategory: Record<string, number> = {};
     prevExpenses.forEach((e) => {
@@ -53,17 +62,16 @@ export default function BudgetTracker() {
     toast.success("Last month's expenses pushed to budget!");
   };
 
-  // Spent values - manual input by user
-  const [spentValues, setSpentValues] = useState<Record<string, string>>(() => {
-    const initial: Record<string, string> = {};
-    categories.forEach((cat) => {
-      initial[cat.id] = "";
-    });
-    return initial;
-  });
+  // Shopping spent is auto-calculated from shopping list items
+  const getSpentForCategory = (catId: string) => {
+    if (catId === "shopping") return shoppingTotal;
+    return parseFloat(spentValues[catId]) || 0;
+  };
 
   const totalBudget = Object.values(budgetValues).reduce((s, v) => s + (parseFloat(v) || 0), 0);
-  const totalSpent = Object.values(spentValues).reduce((s, v) => s + (parseFloat(v) || 0), 0);
+  const totalSpent = useMemo(() => {
+    return categories.reduce((sum, cat) => sum + getSpentForCategory(cat.id), 0);
+  }, [spentValues, shoppingTotal, categories]);
   const totalRemaining = totalBudget - totalSpent;
 
   const handleSave = () => {
@@ -73,6 +81,18 @@ export default function BudgetTracker() {
     });
     setBudget(currentMonth, catBudgets, totalBudget);
     toast.success("Budget saved!");
+  };
+
+  const handlePushToShoppingList = () => {
+    const shoppingBudget = parseFloat(budgetValues["shopping"]) || 0;
+    if (shoppingBudget <= 0) {
+      toast.error("Set a Shopping budget first");
+      return;
+    }
+    // Save budget first, then navigate to shopping
+    handleSave();
+    navigate("/shopping");
+    toast.success(`Shopping list opened with Ksh ${shoppingBudget.toLocaleString()} budget`);
   };
 
   return (
@@ -137,17 +157,19 @@ export default function BudgetTracker() {
         <div className="space-y-3">
           {categories.map((cat) => {
             const budget = parseFloat(budgetValues[cat.id]) || 0;
-            const spent = parseFloat(spentValues[cat.id]) || 0;
+            const spent = getSpentForCategory(cat.id);
             const remaining = budget - spent;
             const pct = budget > 0 ? (spent / budget) * 100 : 0;
             const overBudget = pct > 100;
             const nearBudget = pct > 80 && pct <= 100;
+            const isShopping = cat.id === "shopping";
 
             return (
               <div key={cat.id} className="stat-card space-y-2">
                 <div className="flex items-center gap-2">
                   <span>{cat.icon}</span>
                   <span className="font-medium text-sm flex-1">{cat.name}</span>
+                  {isShopping && <Lock className="w-3 h-3 text-muted-foreground" />}
                   {overBudget && <AlertTriangle className="w-4 h-4 text-destructive" />}
                   {nearBudget && <AlertTriangle className="w-4 h-4 text-accent" />}
                   {budget > 0 && !overBudget && !nearBudget && <CheckCircle className="w-4 h-4 text-primary" />}
@@ -164,14 +186,23 @@ export default function BudgetTracker() {
                   </div>
                 </div>
 
-                {/* Spent - manual input */}
+                {/* Spent - read-only for shopping, editable for others */}
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1 flex-1">
                     <span className="text-xs text-muted-foreground">Spent:</span>
                     <span className="text-xs text-muted-foreground">Ksh</span>
-                    <Input type="number" min="0" placeholder="0" value={spentValues[cat.id]}
-                      onChange={(e) => setSpentValues((prev) => ({ ...prev, [cat.id]: e.target.value }))}
-                      className="h-8 text-sm rounded-lg" />
+                    {isShopping ? (
+                      <div className="flex items-center gap-2 flex-1">
+                        <span className="text-sm font-semibold text-foreground bg-muted px-3 py-1.5 rounded-lg flex-1">
+                          {shoppingTotal.toLocaleString()}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground whitespace-nowrap">from list</span>
+                      </div>
+                    ) : (
+                      <Input type="number" min="0" placeholder="0" value={spentValues[cat.id]}
+                        onChange={(e) => setSpentValues((prev) => ({ ...prev, [cat.id]: e.target.value }))}
+                        className="h-8 text-sm rounded-lg" />
+                    )}
                   </div>
                 </div>
 
@@ -189,6 +220,15 @@ export default function BudgetTracker() {
                 </div>
 
                 {budget > 0 && <Progress value={Math.min(pct, 100)} className="h-1.5" />}
+
+                {/* Push to Shopping List button for shopping category */}
+                {isShopping && budget > 0 && (
+                  <Button onClick={handlePushToShoppingList} variant="outline" size="sm"
+                    className="w-full mt-1 rounded-lg h-8 text-xs gap-1.5">
+                    <ShoppingCart className="w-3.5 h-3.5" />
+                    Open Shopping List
+                  </Button>
+                )}
               </div>
             );
           })}
