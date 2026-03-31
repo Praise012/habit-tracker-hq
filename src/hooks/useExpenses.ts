@@ -99,6 +99,12 @@ export function useExpenses() {
     setShoppingItems((prev) => prev.map((i) => i.id === id ? { ...i, ...updates } : i));
   }, [user]);
 
+  const markShoppingItemsRecorded = useCallback(async (ids: string[]) => {
+    if (!user || ids.length === 0) return;
+    await supabase.from("shopping_items").update({ recorded: true } as any).in("id", ids);
+    setShoppingItems((prev) => prev.map((i) => ids.includes(i.id) ? { ...i, recorded: true } : i));
+  }, [user]);
+
   const shoppingTotal = useMemo(() => {
     return shoppingItems.reduce((s, i) => s + i.price * i.quantity, 0);
   }, [shoppingItems]);
