@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Wallet, AlertTriangle, CheckCircle, PiggyBank, ArrowDownToLine, History, ShoppingCart, Lock } from "lucide-react";
+import { Wallet, AlertTriangle, CheckCircle, PiggyBank, ArrowDownToLine, History, ShoppingCart, Lock, Eye, CheckCircle2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export default function BudgetTracker() {
