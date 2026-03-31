@@ -74,7 +74,7 @@ export function useExpenses() {
     if (data && !error) {
       setShoppingItems((prev) => [{
         id: data.id, name: data.name, price: Number(data.price),
-        quantity: data.quantity, purchased: data.purchased, date: data.date,
+        quantity: data.quantity, purchased: data.purchased, recorded: false, date: data.date,
       }, ...prev]);
     }
   }, [user]);
